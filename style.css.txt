@@ -1,0 +1,210 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;900&family=Oswald:wght@400;600&display=swap');
+
+body {
+    font-family: 'Oswald', sans-serif;
+    background-color: #0f1015;
+    color: #ffffff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px 0;
+}
+
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.ow-card {
+    background-color: #1a1b23;
+    width: 380px;
+    border-radius: 12px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+    border: 2px solid #2e303d;
+    transition: all 0.3s ease;
+}
+
+.ow-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(240, 100, 20, 0.2);
+    border-color: #f06414;
+}
+
+.card-header {
+    background: linear-gradient(135deg, #282a36 0%, #1a1b23 100%);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 3px solid #f06414;
+}
+
+.rank-icon {
+    width: 50px;
+    height: 50px;
+    margin-right: 15px;
+    background-color: #282a36;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid #00d2ff;
+}
+
+.diamond-icon {
+    width: 20px;
+    height: 20px;
+    background-color: #00d2ff;
+    transform: rotate(45deg);
+    box-shadow: 0 0 10px #00d2ff;
+}
+
+.player-info h2 {
+    margin: 0;
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 900;
+    font-size: 26px;
+    letter-spacing: 1px;
+    color: #ffffff;
+}
+
+.player-info span {
+    color: #9aa0a6;
+    font-size: 14px;
+}
+
+.stats-summary {
+    padding: 20px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    border-bottom: 1px solid #2e303d;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 900;
+    font-size: 34px;
+    color: #f06414;
+    line-height: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: #9aa0a6;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+}
+
+.top-heroes {
+    padding: 20px;
+}
+
+.section-title {
+    font-size: 13px;
+    color: #9aa0a6;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: block;
+}
+
+.hero-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+    background-color: #242632;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.hero-item:hover {
+    border-color: #f06414;
+}
+
+.hero-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 6px;
+    margin-right: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 900;
+    font-size: 20px;
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.hero-tracer {
+    background: linear-gradient(135deg, #f06414, #ff9000);
+}
+
+.hero-genji {
+    background: linear-gradient(135deg, #84c000, #a9f000);
+    color: #000000;
+}
+
+.hero-details {
+    flex-grow: 1;
+}
+
+.hero-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.hero-time {
+    color: #9aa0a6;
+    font-size: 12px;
+}
+
+.hero-win-rate {
+    font-family: 'Big Shoulders Display', sans-serif;
+    color: #f06414;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.action-area {
+    margin-top: 25px;
+    text-align: center;
+}
+
+#downloadBtn {
+    background: linear-gradient(135deg, #f06414, #ff9000);
+    color: #ffffff;
+    border: none;
+    padding: 12px 28px;
+    font-family: 'Oswald', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(240, 100, 20, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#downloadBtn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(240, 100, 20, 0.6);
+}
+
+.author-tag {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #888888;
+    letter-spacing: 1px;
+}
