@@ -17,10 +17,7 @@ function initHeroDropdown() {
     const heroSelect = document.getElementById('heroSelect');
     if (!heroSelect) return;
     
-    // 清空現有選項並設定預設值
     heroSelect.innerHTML = '<option value="all">全英雄總計</option>';
-    
-    // 依中文字母排序英雄
     const sortedHeroes = Object.entries(heroTranslations).sort((a, b) => a[1].localeCompare(b[1], 'zh-Hant'));
     
     sortedHeroes.forEach(([key, chineseName]) => {
@@ -31,7 +28,6 @@ function initHeroDropdown() {
     });
 }
 
-// 頁面載入時初始化選單
 document.addEventListener('DOMContentLoaded', initHeroDropdown);
 
 function getHeroChineseName(englishKey) {
@@ -62,12 +58,12 @@ async function fetchPlayerData() {
     searchBtn.disabled = true;
 
     try {
-        // 1. 抓取玩家概要資訊
+        // 1. 玩家摘要
         const summaryRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
-        if (!summaryRes.ok) throw new Error('找不到該玩家，請確認 ID 是否正確或個人檔案已公開。');
+        if (!summaryRes.ok) throw new Error('找不到該玩家，請確認 ID 是否正確或檔案已公開。');
         const summaryData = await summaryRes.json();
 
-        // 2. 抓取完整統計數據 (含各模式與英雄明細)
+        // 2. 完整生涯數據
         const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
@@ -79,7 +75,7 @@ async function fetchPlayerData() {
             statusMsg.innerText = '✅ 數據載入成功！';
             statusMsg.style.color = '#84c000';
         } else {
-            statusMsg.innerText = '⚠️ 該玩家數據未公開或無此模式紀錄';
+            statusMsg.innerText = '⚠️ 該玩家數據未公開或此模式無紀錄';
             statusMsg.style.color = '#ff9000';
         }
 
@@ -91,16 +87,10 @@ async function fetchPlayerData() {
     }
 }
 
-// 解析與顯示特定模式/英雄的統計數據
 function parseAndDisplayStats(statsData, mode, selectedHero) {
-    // 依模式取得資料區域 (quickplay / competitive / all)
-    let modeData = null;
-    if (mode === 'all') {
-        // 整合 quickplay 與 competitive 資料
-        modeData = mergeModesData(statsData.quickplay, statsData.competitive);
-    } else {
-        modeData = statsData[mode];
-    }
+    let modeData = mode === 'all' 
+        ? mergeModesData(statsData.quickplay, statsData.competitive) 
+        : statsData[mode];
 
     if (!modeData || !modeData.heroes) {
         document.getElementById('cardWinRate').innerText = '無紀錄';
@@ -110,27 +100,34 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
     }
 
     if (selectedHero === 'all') {
-        // 展示常用英雄排名 TOP 2
         const heroesArray = Object.entries(modeData.heroes).map(([key, value]) => {
             const timePlayed = getStatValue(value, 'time_played') || 0;
             const gamesWon = getStatValue(value, 'games_won') || 0;
             const gamesPlayed = getStatValue(value, 'games_played') || 0;
+            const elims = getStatValue(value, 'eliminations') || 0;
+            const deaths = getStatValue(value, 'deaths') || 1;
             const winrate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
             return {
                 key,
                 name: getHeroChineseName(key),
                 timePlayed,
                 gamesWon,
-                winrate
+                winrate,
+                kda: (elims / deaths).toFixed(1)
             };
         }).sort((a, b) => b.timePlayed - a.timePlayed);
 
-        // 計算整體總勝場與平均勝率
         const totalWins = heroesArray.reduce((acc, h) => acc + h.gamesWon, 0);
+        const avgWinRate = heroesArray.length > 0 ? Math.round(heroesArray.reduce((acc, h) => acc + h.winrate, 0) / heroesArray.length) : 0;
+        const avgKDA = heroesArray.length > 0 ? (heroesArray.reduce((acc, h) => acc + parseFloat(h.kda), 0) / heroesArray.length).toFixed(1) : '0.0';
+
         document.getElementById('cardTotalWins').innerText = totalWins;
-        
+        document.getElementById('cardWinRate').innerText = `${avgWinRate}%`;
+        document.getElementById('cardKDA').innerText = avgKDA;
+
         if (heroesArray.length > 0) {
             const h1 = heroesArray[0];
+            document.getElementById('hero1Tag').innerText = h1.name.substring(0, 2);
             document.getElementById('hero1Name').innerText = h1.name;
             document.getElementById('hero1Time').innerText = `勝場: ${h1.gamesWon} 次 | 時間: ${formatTime(h1.timePlayed)}`;
             document.getElementById('hero1WR').innerText = `${h1.winrate}%`;
@@ -138,49 +135,52 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
 
         if (heroesArray.length > 1) {
             const h2 = heroesArray[1];
+            document.getElementById('hero2Tag').innerText = h2.name.substring(0, 2);
             document.getElementById('hero2Name').innerText = h2.name;
             document.getElementById('hero2Time').innerText = `勝場: ${h2.gamesWon} 次 | 時間: ${formatTime(h2.timePlayed)}`;
             document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
         }
     } else {
-        // 顯示指定單一英雄數據
         const heroData = modeData.heroes[selectedHero];
+        const cName = getHeroChineseName(selectedHero);
         if (heroData) {
             const timePlayed = getStatValue(heroData, 'time_played') || 0;
             const gamesWon = getStatValue(heroData, 'games_won') || 0;
             const gamesPlayed = getStatValue(heroData, 'games_played') || 0;
+            const elims = getStatValue(heroData, 'eliminations') || 0;
+            const deaths = getStatValue(heroData, 'deaths') || 1;
             const winrate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
+            const kda = (elims / deaths).toFixed(1);
 
             document.getElementById('cardTotalWins').innerText = gamesWon;
             document.getElementById('cardWinRate').innerText = `${winrate}%`;
-            
-            document.getElementById('hero1Name').innerText = getHeroChineseName(selectedHero);
+            document.getElementById('cardKDA').innerText = kda;
+
+            document.getElementById('hero1Tag').innerText = cName.substring(0, 2);
+            document.getElementById('hero1Name').innerText = cName;
             document.getElementById('hero1Time').innerText = `總遊玩時間: ${formatTime(timePlayed)}`;
-            document.getElementById('hero1WR').innerText = `勝率 ${winrate}%`;
-            
-            document.getElementById('hero2Name').innerText = '單一英雄模式';
-            document.getElementById('hero2Time').innerText = `共計勝場 ${gamesWon} 場`;
+            document.getElementById('hero1WR').innerText = `${winrate}%`;
+
+            document.getElementById('hero2Tag').innerText = '特';
+            document.getElementById('hero2Name').innerText = '單一英雄數據模式';
+            document.getElementById('hero2Time').innerText = `累積擊殺: ${elims} 次`;
             document.getElementById('hero2WR').innerText = '-';
         } else {
-            document.getElementById('hero1Name').innerText = getHeroChineseName(selectedHero);
-            document.getElementById('hero1Time').innerText = '此模式無遊玩紀錄';
+            document.getElementById('hero1Name').innerText = cName;
+            document.getElementById('hero1Time').innerText = '此模式下尚無遊玩紀錄';
             document.getElementById('hero1WR').innerText = '-';
         }
     }
 }
 
-// 輔助工具：從 OverFast 複雜的數值陣列中取出目標值
 function getStatValue(heroObj, statName) {
     if (!heroObj) return 0;
-    // 如果是直接數值
     if (typeof heroObj[statName] === 'number') return heroObj[statName];
-    // 如果存在於 general / game 統計分類中
     if (heroObj.general && heroObj.general[statName]) return heroObj.general[statName];
     if (heroObj.game && heroObj.game[statName]) return heroObj.game[statName];
     return 0;
 }
 
-// 合併快速與競技資料
 function mergeModesData(qp, comp) {
     const merged = { heroes: {} };
     [qp, comp].forEach(mode => {
@@ -189,7 +189,6 @@ function mergeModesData(qp, comp) {
             if (!merged.heroes[heroKey]) {
                 merged.heroes[heroKey] = JSON.parse(JSON.stringify(data));
             } else {
-                // 時間與勝場累加
                 const t1 = getStatValue(merged.heroes[heroKey], 'time_played');
                 const t2 = getStatValue(data, 'time_played');
                 const w1 = getStatValue(merged.heroes[heroKey], 'games_won');
@@ -209,4 +208,17 @@ function formatTime(seconds) {
     if (hours > 0) return `${hours} 小時`;
     const minutes = Math.floor(seconds / 60);
     return `${minutes} 分鐘`;
+}
+
+function downloadCard() {
+    const cardElement = document.getElementById('myCard');
+    html2canvas(cardElement, {
+        backgroundColor: '#0d1117',
+        scale: 2
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'Overwatch2_Stats_Card.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+    });
 }
