@@ -12,35 +12,72 @@ async function fetchPlayerData() {
     // 將 BattleTag 中的 '#' 替換為 '-' 以符合 API 格式
     const formattedTag = rawInput.replace('#', '-');
     
-    statusMsg.innerText = '⏳ 正在向《鬥陣特攻》伺服器查詢數據中...';
+    statusMsg.innerText = '⏳ 正在查詢英雄與生涯數據中...';
     statusMsg.style.color = '#ff9000';
     searchBtn.disabled = true;
 
     try {
-        const response = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
-        
-        if (!response.ok) {
-            if (response.status === 404) {
-                throw new Error('找不到該玩家，請確認 ID 是否正確或玩家檔案是否設為不公開。');
+        // 1. 抓取基本資料 (Summary)
+        const summaryRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
+        if (!summaryRes.ok) {
+            if (summaryRes.status === 404) {
+                throw new Error('找不到該玩家，請確認 ID 是否正確或遊戲內檔案是否設為公開。');
             } else {
                 throw new Error('伺服器連線失敗，請稍後再試。');
             }
         }
+        const summaryData = await summaryRes.json();
 
-        const data = await response.json();
+        // 2. 抓取詳細英雄與生涯數據 (Stats Summary)
+        const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/summary`);
+        const statsData = statsRes.ok ? await statsRes.json() : null;
 
-        // 1. 更新玩家基本資訊
-        document.getElementById('cardPlayerName').innerText = data.username || rawInput;
-        document.getElementById('cardTitle').innerText = data.title ? `稱號: ${data.title}` : '公開個人檔案玩家';
+        // --- 更新玩家基本資訊 ---
+        document.getElementById('cardPlayerName').innerText = summaryData.username || rawInput;
+        document.getElementById('cardTitle').innerText = summaryData.title ? `稱號: ${summaryData.title}` : '公開個人檔案玩家';
 
-        // 2. 更新讚賞與等級數據
-        if (data.endorsement) {
-            document.getElementById('cardKDA').innerText = `Lv. ${data.endorsement.level}`;
-            document.getElementById('cardTotalWins').innerText = data.competitive?.pc?.season ? `S${data.competitive.pc.season}` : '一般';
+        // --- 更新核心數據 (KDA / 勝率 / 勝場) ---
+        if (statsData && statsData.general) {
+            const gen = statsData.general;
+            document.getElementById('cardWinRate').innerText = `${gen.winrate || 0}%`;
+            document.getElementById('cardKDA').innerText = gen.kda ? gen.kda.toFixed(1) : '0.0';
+            document.getElementById('cardTotalWins').innerText = gen.games_won || 0;
+        } else if (summaryData.endorsement) {
+            document.getElementById('cardKDA').innerText = `Lv. ${summaryData.endorsement.level}`;
             document.getElementById('cardWinRate').innerText = '公開';
+            document.getElementById('cardTotalWins').innerText = '-';
         }
 
-        statusMsg.innerText = '✅ 數據載入成功！';
+        // --- 更新常用前兩名英雄數據 ---
+        if (statsData && statsData.heroes) {
+            // 將英雄物件轉為陣列並按使用時間排序
+            const heroesArray = Object.entries(statsData.heroes).map(([key, value]) => ({
+                key: key,
+                name: value.name || key,
+                timePlayed: value.time_played || 0,
+                winrate: value.winrate || 0
+            })).sort((a, b) => b.timePlayed - a.timePlayed);
+
+            // 更新第一常用英雄
+            if (heroesArray.length > 0) {
+                const h1 = heroesArray[0];
+                document.getElementById('hero1Tag').innerText = h1.name.substring(0, 2).toUpperCase();
+                document.getElementById('hero1Name').innerText = h1.name;
+                document.getElementById('hero1Time').innerText = `使用時間: ${formatTime(h1.timePlayed)}`;
+                document.getElementById('hero1WR').innerText = `${h1.winrate}%`;
+            }
+
+            // 更新第二常用英雄
+            if (heroesArray.length > 1) {
+                const h2 = heroesArray[1];
+                document.getElementById('hero2Tag').innerText = h2.name.substring(0, 2).toUpperCase();
+                document.getElementById('hero2Name').innerText = h2.name;
+                document.getElementById('hero2Time').innerText = `使用時間: ${formatTime(h2.timePlayed)}`;
+                document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
+            }
+        }
+
+        statusMsg.innerText = '✅ 英雄與生涯數據載入成功！';
         statusMsg.style.color = '#84c000';
 
     } catch (error) {
@@ -51,7 +88,18 @@ async function fetchPlayerData() {
     }
 }
 
-// 下載卡片為 PNG 圖片
+// 輔助函式：將秒數格式化為小時或分鐘
+function formatTime(seconds) {
+    if (!seconds) return '0分鐘';
+    const hours = Math.floor(seconds / 3600);
+    if (hours > 0) {
+        return `${hours} 小時`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    return `${minutes} 分鐘`;
+}
+
+// 下載卡片功能
 function downloadCard() {
     const cardElement = document.getElementById('myCard');
     
