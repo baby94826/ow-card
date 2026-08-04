@@ -1,3 +1,54 @@
+// 全英雄英文轉中文對照表
+const heroTranslations = {
+    "ana": "安娜",
+    "ashe": "艾希",
+    "baptiste": "巴帝斯特",
+    "bastion": "兵工廠",
+    "brigitte": "碧姬",
+    "cassidy": "卡西迪",
+    "dva": "D.Va",
+    "doomfist": "毀滅拳王",
+    "echo": "回音",
+    "genji": "源氏",
+    "hanzo": "半藏",
+    "junker-queen": "渣客女王",
+    "junkrat": "狂鼠",
+    "kiriko": "霧子",
+    "lifeweaver": "織命",
+    "lucio": "路西歐",
+    "mauga": "茂加",
+    "mei": "美",
+    "mercy": "慈悲",
+    "moira": "莫伊拉",
+    "orisa": "歐瑞莎",
+    "pharah": "法拉",
+    "ramattra": "拉瑪塔",
+    "reaper": "死神",
+    "reinhardt": "萊因哈特",
+    "roadhog": "攔路豬",
+    "sigma": "席格馬",
+    "sojourn": "索潔恩",
+    "soldier-76": "士兵76",
+    "sombra": "駭影",
+    "symmetra": "辛梅塔",
+    "torbjorn": "托比昂",
+    "tracer": "閃光",
+    "widowmaker": "奪命女",
+    "winston": "溫斯頓",
+    "wrecking-ball": "火爆鋼球",
+    "zarya": "札莉雅",
+    "zenyatta": "禪亞塔",
+    "illari": "伊拉莉",
+    "venture": "冒險家",
+    "juno": "朱諾"
+};
+
+// 輔助函式：取得中文英雄名稱
+function getHeroChineseName(englishKey, fallbackName) {
+    const key = englishKey.toLowerCase();
+    return heroTranslations[key] || fallbackName || englishKey;
+}
+
 async function fetchPlayerData() {
     const rawInput = document.getElementById('battleTagInput').value.trim();
     const statusMsg = document.getElementById('statusMessage');
@@ -46,14 +97,15 @@ async function fetchPlayerData() {
         // 更新英雄數據 (若有英雄資料)
         if (statsData && statsData.heroes && Object.keys(statsData.heroes).length > 0) {
             const heroesArray = Object.entries(statsData.heroes).map(([key, value]) => ({
-                name: value.name || key,
+                key: key,
+                name: getHeroChineseName(key, value.name),
                 timePlayed: value.time_played || 0,
                 winrate: value.winrate || 0
             })).sort((a, b) => b.timePlayed - a.timePlayed);
 
             if (heroesArray.length > 0) {
                 const h1 = heroesArray[0];
-                document.getElementById('hero1Tag').innerText = h1.name.substring(0, 2).toUpperCase();
+                document.getElementById('hero1Tag').innerText = h1.name.substring(0, 2);
                 document.getElementById('hero1Name').innerText = h1.name;
                 document.getElementById('hero1Time').innerText = `使用時間: ${formatTime(h1.timePlayed)}`;
                 document.getElementById('hero1WR').innerText = `${h1.winrate}%`;
@@ -61,7 +113,7 @@ async function fetchPlayerData() {
 
             if (heroesArray.length > 1) {
                 const h2 = heroesArray[1];
-                document.getElementById('hero2Tag').innerText = h2.name.substring(0, 2).toUpperCase();
+                document.getElementById('hero2Tag').innerText = h2.name.substring(0, 2);
                 document.getElementById('hero2Name').innerText = h2.name;
                 document.getElementById('hero2Time').innerText = `使用時間: ${formatTime(h2.timePlayed)}`;
                 document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
