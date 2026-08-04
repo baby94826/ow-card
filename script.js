@@ -9,7 +9,7 @@ async function fetchPlayerData() {
         return;
     }
 
-    // OverFast API 需要將 '#' 轉為 '-' (例如: Player#1234 -> Player-1234)
+    // 將 BattleTag 中的 '#' 替換為 '-' 以符合 API 格式
     const formattedTag = rawInput.replace('#', '-');
     
     statusMsg.innerText = '⏳ 正在向《鬥陣特攻》伺服器查詢數據中...';
@@ -17,7 +17,6 @@ async function fetchPlayerData() {
     searchBtn.disabled = true;
 
     try {
-        // 向 API 發送請求
         const response = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
         
         if (!response.ok) {
@@ -34,7 +33,7 @@ async function fetchPlayerData() {
         document.getElementById('cardPlayerName').innerText = data.username || rawInput;
         document.getElementById('cardTitle').innerText = data.title ? `稱號: ${data.title}` : '公開個人檔案玩家';
 
-        // 2. 更新勝率與數據 (若有一般數據)
+        // 2. 更新讚賞與等級數據
         if (data.endorsement) {
             document.getElementById('cardKDA').innerText = `Lv. ${data.endorsement.level}`;
             document.getElementById('cardTotalWins').innerText = data.competitive?.pc?.season ? `S${data.competitive.pc.season}` : '一般';
@@ -52,7 +51,7 @@ async function fetchPlayerData() {
     }
 }
 
-// 原本的下載圖片功能保持不變
+// 下載卡片為 PNG 圖片
 function downloadCard() {
     const cardElement = document.getElementById('myCard');
     
