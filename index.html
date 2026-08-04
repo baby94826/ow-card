@@ -6,7 +6,7 @@
     <title>《鬥陣特攻 2》玩家數據卡片產生器</title>
     <link rel="stylesheet" href="style.css">
     <!-- 引入截圖套件 html2canvas -->
-    <script src="https://cdnjs.cloudflare.com/org/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
 
@@ -66,12 +66,12 @@
                 </div>
             </div>
 
-            <!-- 常用英雄列表區 -->
+            <!-- 常用英雄列表區 (包含動態大頭照) -->
             <div class="heroes-section">
                 <h3 class="section-title">HERO STATS</h3>
                 
                 <div class="hero-item">
-                    <div class="hero-avatar" id="hero1Tag">H1</div>
+                    <img id="hero1Avatar" class="hero-avatar-img" src="https://overfast-api.tekrop.fr/static/heroes/tracer/icon.png" alt="Hero 1">
                     <div class="hero-details">
                         <div class="hero-header">
                             <span id="hero1Name" class="hero-name">常用英雄 1</span>
@@ -82,7 +82,7 @@
                 </div>
 
                 <div class="hero-item">
-                    <div class="hero-avatar" id="hero2Tag">H2</div>
+                    <img id="hero2Avatar" class="hero-avatar-img" src="https://overfast-api.tekrop.fr/static/heroes/reinhardt/icon.png" alt="Hero 2">
                     <div class="hero-details">
                         <div class="hero-header">
                             <span id="hero2Name" class="hero-name">常用英雄 2</span>
