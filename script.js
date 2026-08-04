@@ -60,27 +60,59 @@ async function fetchPlayerData() {
     }
 
     const formattedTag = rawInput.replace('#', '-');
-    statusMsg.innerText = '⏳ 正在查詢生涯數據中...';
+    statusMsg.innerText = '⏳ 正在查詢生涯數據（首次查詢可能需 5~10 秒）...';
     statusMsg.style.color = '#ff9000';
     searchBtn.disabled = true;
 
     try {
+        // 1. 查詢玩家摘要
         const summaryRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
-        if (!summaryRes.ok) throw new Error('找不到該玩家，請確認 ID 是否正確或檔案已公開。');
+        
+        if (!summaryRes.ok) {
+            if (summaryRes.status === 404) {
+                throw new Error('找不到該玩家！請檢查 BattleTag 大小寫是否完全正確。');
+            } else {
+                throw new Error(`伺服器回應異常 (HTTP ${summaryRes.status})，請稍後再試。`);
+            }
+        }
+        
         const summaryData = await summaryRes.json();
 
-        const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
-        const statsData = statsRes.ok ? await statsRes.json() : null;
+        // 檢查 API 回傳的隱私權狀態
+        if (summaryData.privacy === 'private') {
+            throw new Error('API 偵測到你的個人檔案目前仍為「私密」，請確認遊戲內已改為「公開」。');
+        }
 
         document.getElementById('cardPlayerName').innerText = summaryData.username || rawInput;
         document.getElementById('cardTitle').innerText = summaryData.title ? `稱號: ${summaryData.title}` : '公開個人檔案玩家';
+
+        // 2. 嘗試抓取完整數據
+        let statsData = null;
+        try {
+            const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
+            if (statsRes.ok) {
+                statsData = await statsRes.json();
+            } else {
+                console.warn(`/stats/complete 請求失敗 (HTTP ${statsRes.status})，嘗試使用簡易數據`);
+            }
+        } catch (e) {
+            console.warn('完整數據抓取逾時:', e);
+        }
+
+        // 3. 若完整數據抓取失敗，嘗試備援 API (/stats/summary)
+        if (!statsData) {
+            const summaryStatsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/summary`);
+            if (summaryStatsRes.ok) {
+                statsData = await summaryStatsRes.json();
+            }
+        }
 
         if (statsData) {
             parseAndDisplayStats(statsData, mode, selectedHero);
             statusMsg.innerText = '✅ 數據載入成功！';
             statusMsg.style.color = '#84c000';
         } else {
-            statusMsg.innerText = '⚠️ 該玩家數據未公開或此模式無紀錄';
+            statusMsg.innerText = '⚠️ API 爬蟲逾時中，請再點擊一次「查詢數據」按鈕重試！';
             statusMsg.style.color = '#ff9000';
         }
 
@@ -93,14 +125,25 @@ async function fetchPlayerData() {
 }
 
 function parseAndDisplayStats(statsData, mode, selectedHero) {
-    let modeData = mode === 'all' 
-        ? mergeModesData(statsData.quickplay, statsData.competitive) 
-        : statsData[mode];
+    let modeData = null;
 
-    if (!modeData || !modeData.heroes) {
-        document.getElementById('cardWinRate').innerText = '無紀錄';
+    if (mode === 'all') {
+        modeData = mergeModesData(statsData.quickplay, statsData.competitive);
+    } else {
+        modeData = statsData[mode];
+    }
+
+    // 若無英雄數據時的友善提示
+    if (!modeData || !modeData.heroes || Object.keys(modeData.heroes).length === 0) {
+        document.getElementById('cardWinRate').innerText = '0%';
         document.getElementById('cardKDA').innerText = '0.0';
         document.getElementById('cardTotalWins').innerText = '0';
+        document.getElementById('hero1Name').innerText = '無遊玩紀錄';
+        document.getElementById('hero1Time').innerText = '該模式下尚無戰績';
+        document.getElementById('hero1WR').innerText = '-';
+        document.getElementById('hero2Name').innerText = '無遊玩紀錄';
+        document.getElementById('hero2Time').innerText = '該模式下尚無戰績';
+        document.getElementById('hero2WR').innerText = '-';
         return;
     }
 
@@ -171,6 +214,9 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
             document.getElementById('hero2Time').innerText = `累積擊殺: ${elims} 次`;
             document.getElementById('hero2WR').innerText = '-';
         } else {
+            document.getElementById('cardTotalWins').innerText = '0';
+            document.getElementById('cardWinRate').innerText = '0%';
+            document.getElementById('cardKDA').innerText = '0.0';
             document.getElementById('hero1Avatar').src = getHeroAvatarUrl(selectedHero);
             document.getElementById('hero1Name').innerText = cName;
             document.getElementById('hero1Time').innerText = '此模式下尚無遊玩紀錄';
@@ -216,7 +262,6 @@ function formatTime(seconds) {
     return `${minutes} 分鐘`;
 }
 
-// 支援跨域圖片繪製與截圖
 function downloadCard() {
     const cardElement = document.getElementById('myCard');
     html2canvas(cardElement, {
