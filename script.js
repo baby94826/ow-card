@@ -1,52 +1,63 @@
-// 全英雄英文轉中文對照表
+// 《鬥陣特攻 2》台灣官方繁體中文字典 (無重複精簡版)
 const heroTranslations = {
-    "ana": "安娜",
-    "ashe": "艾希",
-    "baptiste": "巴帝斯特",
-    "bastion": "兵工廠",
-    "brigitte": "碧姬",
-    "cassidy": "卡西迪",
+    // === 重裝 (Tanks) ===
     "dva": "D.Va",
     "doomfist": "毀滅拳王",
-    "echo": "回音",
-    "genji": "源氏",
-    "hanzo": "半藏",
-    "junker-queen": "渣客女王",
-    "junkrat": "狂鼠",
-    "kiriko": "霧子",
-    "lifeweaver": "織命",
-    "lucio": "路西歐",
-    "mauga": "茂加",
-    "mei": "美",
-    "mercy": "慈悲",
-    "moira": "莫伊拉",
+    "junkerqueen": "垃圾鎮女王",
+    "mauga": "莫加",
     "orisa": "歐瑞莎",
-    "pharah": "法拉",
     "ramattra": "拉瑪塔",
-    "reaper": "死神",
     "reinhardt": "萊因哈特",
     "roadhog": "攔路豬",
     "sigma": "席格馬",
+    "winston": "溫斯頓",
+    "wreckingball": "火爆鋼球",
+    "zarya": "札莉雅",
+    "hazard": "災害",
+
+    // === 傷害 (Damage) ===
+    "ashe": "艾西",
+    "bastion": "壁壘機兵",
+    "cassidy": "卡西迪",
+    "mccree": "卡西迪",
+    "echo": "迴音",
+    "genji": "源氏",
+    "hanzo": "半藏",
+    "junkrat": "炸彈鼠",
+    "mei": "小美",
+    "pharah": "法拉",
+    "reaper": "死神",
     "sojourn": "索潔恩",
-    "soldier-76": "士兵76",
+    "soldier76": "士兵76",
     "sombra": "駭影",
     "symmetra": "辛梅塔",
     "torbjorn": "托比昂",
     "tracer": "閃光",
+    "venture": "無畏",
     "widowmaker": "奪命女",
-    "winston": "溫斯頓",
-    "wrecking-ball": "火爆鋼球",
-    "zarya": "札莉雅",
-    "zenyatta": "禪亞塔",
-    "illari": "伊拉莉",
-    "venture": "冒險家",
-    "juno": "朱諾"
+
+    // === 輔助 (Support) ===
+    "ana": "安娜",
+    "baptiste": "巴帝斯特",
+    "brigitte": "碧姬",
+    "illari": "伊拉里",
+    "juno": "朱諾",
+    "kiriko": "霧子",
+    "lifeweaver": "織命",
+    "lucio": "路西歐",
+    "mercy": "慈悲",
+    "moira": "莫伊拉",
+    "zenyatta": "禪亞塔"
 };
 
-// 輔助函式：取得中文英雄名稱
+// 輔助函式：將字串清理後自動對照中文
 function getHeroChineseName(englishKey, fallbackName) {
-    const key = englishKey.toLowerCase();
-    return heroTranslations[key] || fallbackName || englishKey;
+    if (!englishKey) return fallbackName || '未知英雄';
+    
+    // 自動去除連字號、空格、符號並轉小寫 (例如 "Soldier: 76" -> "soldier76")
+    const cleanKey = englishKey.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    return heroTranslations[cleanKey] || fallbackName || englishKey;
 }
 
 async function fetchPlayerData() {
@@ -94,7 +105,7 @@ async function fetchPlayerData() {
             document.getElementById('cardTotalWins').innerText = '-';
         }
 
-        // 更新英雄數據 (若有英雄資料)
+        // 更新英雄數據
         if (statsData && statsData.heroes && Object.keys(statsData.heroes).length > 0) {
             const heroesArray = Object.entries(statsData.heroes).map(([key, value]) => ({
                 key: key,
@@ -119,7 +130,6 @@ async function fetchPlayerData() {
                 document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
             }
         } else {
-            // 若玩家數據未公開英雄細節
             document.getElementById('hero1Name').innerText = '隱私未公開';
             document.getElementById('hero1Time').innerText = '請於遊戲中開放生涯數據';
             document.getElementById('hero1WR').innerText = '-';
