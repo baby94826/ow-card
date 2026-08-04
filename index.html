@@ -80,3 +80,21 @@
     <script src="script.js"></script>
 </body>
 </html>
+<div class="search-box">
+    <input type="text" id="battleTagInput" placeholder="輸入 BattleTag (例如: Player#1234)">
+    
+    <!-- 遊戲模式篩選器 -->
+    <select id="gamemodeSelect">
+        <option value="all">所有模式 (生涯總計)</option>
+        <option value="quickplay">快速對戰</option>
+        <option value="competitive">競技對戰</option>
+    </select>
+
+    <!-- 特定英雄篩選器 -->
+    <select id="heroSelect">
+        <option value="all">全英雄總計</option>
+        <!-- JavaScript 會自動動態填入所有英雄選項 -->
+    </select>
+
+    <button id="searchBtn" onclick="fetchPlayerData()">查詢數據</button>
+</div>
