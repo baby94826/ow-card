@@ -12,6 +12,13 @@ const heroTranslations = {
     "lifeweaver": "織命", "lucio": "路西歐", "mercy": "慈悲", "moira": "莫伊拉", "zenyatta": "禪亞塔"
 };
 
+// 輔助函式：動態取得英雄頭像 URL
+function getHeroAvatarUrl(englishKey) {
+    if (!englishKey) return '';
+    const rawKey = englishKey.toLowerCase().trim();
+    return `https://overfast-api.tekrop.fr/static/heroes/${rawKey}/icon.png`;
+}
+
 // 初始化英雄下拉選單
 function initHeroDropdown() {
     const heroSelect = document.getElementById('heroSelect');
@@ -58,12 +65,10 @@ async function fetchPlayerData() {
     searchBtn.disabled = true;
 
     try {
-        // 1. 玩家摘要
         const summaryRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/summary`);
         if (!summaryRes.ok) throw new Error('找不到該玩家，請確認 ID 是否正確或檔案已公開。');
         const summaryData = await summaryRes.json();
 
-        // 2. 完整生涯數據
         const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
         const statsData = statsRes.ok ? await statsRes.json() : null;
 
@@ -127,7 +132,7 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
 
         if (heroesArray.length > 0) {
             const h1 = heroesArray[0];
-            document.getElementById('hero1Tag').innerText = h1.name.substring(0, 2);
+            document.getElementById('hero1Avatar').src = getHeroAvatarUrl(h1.key);
             document.getElementById('hero1Name').innerText = h1.name;
             document.getElementById('hero1Time').innerText = `勝場: ${h1.gamesWon} 次 | 時間: ${formatTime(h1.timePlayed)}`;
             document.getElementById('hero1WR').innerText = `${h1.winrate}%`;
@@ -135,7 +140,7 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
 
         if (heroesArray.length > 1) {
             const h2 = heroesArray[1];
-            document.getElementById('hero2Tag').innerText = h2.name.substring(0, 2);
+            document.getElementById('hero2Avatar').src = getHeroAvatarUrl(h2.key);
             document.getElementById('hero2Name').innerText = h2.name;
             document.getElementById('hero2Time').innerText = `勝場: ${h2.gamesWon} 次 | 時間: ${formatTime(h2.timePlayed)}`;
             document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
@@ -156,16 +161,17 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
             document.getElementById('cardWinRate').innerText = `${winrate}%`;
             document.getElementById('cardKDA').innerText = kda;
 
-            document.getElementById('hero1Tag').innerText = cName.substring(0, 2);
+            document.getElementById('hero1Avatar').src = getHeroAvatarUrl(selectedHero);
             document.getElementById('hero1Name').innerText = cName;
             document.getElementById('hero1Time').innerText = `總遊玩時間: ${formatTime(timePlayed)}`;
             document.getElementById('hero1WR').innerText = `${winrate}%`;
 
-            document.getElementById('hero2Tag').innerText = '特';
-            document.getElementById('hero2Name').innerText = '單一英雄數據模式';
+            document.getElementById('hero2Avatar').src = getHeroAvatarUrl(selectedHero);
+            document.getElementById('hero2Name').innerText = `${cName} (詳細細節)`;
             document.getElementById('hero2Time').innerText = `累積擊殺: ${elims} 次`;
             document.getElementById('hero2WR').innerText = '-';
         } else {
+            document.getElementById('hero1Avatar').src = getHeroAvatarUrl(selectedHero);
             document.getElementById('hero1Name').innerText = cName;
             document.getElementById('hero1Time').innerText = '此模式下尚無遊玩紀錄';
             document.getElementById('hero1WR').innerText = '-';
@@ -210,11 +216,13 @@ function formatTime(seconds) {
     return `${minutes} 分鐘`;
 }
 
+// 支援跨域圖片繪製與截圖
 function downloadCard() {
     const cardElement = document.getElementById('myCard');
     html2canvas(cardElement, {
         backgroundColor: '#0d1117',
-        scale: 2
+        scale: 2,
+        useCORS: true
     }).then(canvas => {
         const link = document.createElement('a');
         link.download = 'Overwatch2_Stats_Card.png';
