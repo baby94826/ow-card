@@ -60,7 +60,7 @@ async function fetchPlayerData() {
     }
 
     const formattedTag = rawInput.replace('#', '-');
-    statusMsg.innerText = '⏳ 正在查詢生涯數據（首次查詢可能需 5~10 秒）...';
+    statusMsg.innerText = '⏳ 正在查詢生涯數據中...';
     statusMsg.style.color = '#ff9000';
     searchBtn.disabled = true;
 
@@ -78,32 +78,28 @@ async function fetchPlayerData() {
         
         const summaryData = await summaryRes.json();
 
-        // 檢查 API 回傳的隱私權狀態
         if (summaryData.privacy === 'private') {
-            throw new Error('API 偵測到你的個人檔案目前仍為「私密」，請確認遊戲內已改為「公開」。');
+            throw new Error('API 偵測到你的個人檔案目前仍為「私密」，請稍候數分鐘讓暴雪伺服器快取更新。');
         }
 
         document.getElementById('cardPlayerName').innerText = summaryData.username || rawInput;
         document.getElementById('cardTitle').innerText = summaryData.title ? `稱號: ${summaryData.title}` : '公開個人檔案玩家';
 
-        // 2. 嘗試抓取完整數據
+        // 2. 優先抓取相容性高的 summary stats，若無則抓 complete
         let statsData = null;
         try {
-            const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
-            if (statsRes.ok) {
-                statsData = await statsRes.json();
-            } else {
-                console.warn(`/stats/complete 請求失敗 (HTTP ${statsRes.status})，嘗試使用簡易數據`);
-            }
-        } catch (e) {
-            console.warn('完整數據抓取逾時:', e);
-        }
-
-        // 3. 若完整數據抓取失敗，嘗試備援 API (/stats/summary)
-        if (!statsData) {
             const summaryStatsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/summary`);
             if (summaryStatsRes.ok) {
                 statsData = await summaryStatsRes.json();
+            }
+        } catch (e) {
+            console.warn('Summary stats fetch failed, fallback to complete');
+        }
+
+        if (!statsData) {
+            const statsRes = await fetch(`https://overfast-api.tekrop.fr/players/${formattedTag}/stats/complete`);
+            if (statsRes.ok) {
+                statsData = await statsRes.json();
             }
         }
 
@@ -112,7 +108,7 @@ async function fetchPlayerData() {
             statusMsg.innerText = '✅ 數據載入成功！';
             statusMsg.style.color = '#84c000';
         } else {
-            statusMsg.innerText = '⚠️ API 爬蟲逾時中，請再點擊一次「查詢數據」按鈕重試！';
+            statusMsg.innerText = '⚠️ 暫無數據，請確認該模式下是否有遊玩紀錄。';
             statusMsg.style.color = '#ff9000';
         }
 
@@ -133,35 +129,30 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
         modeData = statsData[mode];
     }
 
-    // 若無英雄數據時的友善提示
-    if (!modeData || !modeData.heroes || Object.keys(modeData.heroes).length === 0) {
-        document.getElementById('cardWinRate').innerText = '0%';
-        document.getElementById('cardKDA').innerText = '0.0';
-        document.getElementById('cardTotalWins').innerText = '0';
-        document.getElementById('hero1Name').innerText = '無遊玩紀錄';
-        document.getElementById('hero1Time').innerText = '該模式下尚無戰績';
-        document.getElementById('hero1WR').innerText = '-';
-        document.getElementById('hero2Name').innerText = '無遊玩紀錄';
-        document.getElementById('hero2Time').innerText = '該模式下尚無戰績';
-        document.getElementById('hero2WR').innerText = '-';
+    // 檢查是否有英雄數據
+    const heroesObj = modeData ? (modeData.heroes || modeData) : null;
+
+    if (!heroesObj || typeof heroesObj !== 'object' || Object.keys(heroesObj).length === 0) {
+        resetCardUI();
         return;
     }
 
     if (selectedHero === 'all') {
-        const heroesArray = Object.entries(modeData.heroes).map(([key, value]) => {
-            const timePlayed = getStatValue(value, 'time_played') || 0;
-            const gamesWon = getStatValue(value, 'games_won') || 0;
-            const gamesPlayed = getStatValue(value, 'games_played') || 0;
+        const heroesArray = Object.entries(heroesObj).map(([key, value]) => {
+            const timePlayed = getStatValue(value, 'time_played') || getStatValue(value, 'time_played_seconds') || 0;
+            const gamesWon = getStatValue(value, 'games_won') || getStatValue(value, 'wins') || 0;
+            const gamesPlayed = getStatValue(value, 'games_played') || getStatValue(value, 'matches_played') || 0;
             const elims = getStatValue(value, 'eliminations') || 0;
             const deaths = getStatValue(value, 'deaths') || 1;
-            const winrate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
+            const winrate = getStatValue(value, 'winrate') || (gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0);
+            
             return {
                 key,
                 name: getHeroChineseName(key),
                 timePlayed,
                 gamesWon,
                 winrate,
-                kda: (elims / deaths).toFixed(1)
+                kda: deaths > 0 ? (elims / deaths).toFixed(1) : elims.toFixed(1)
             };
         }).sort((a, b) => b.timePlayed - a.timePlayed);
 
@@ -173,32 +164,41 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
         document.getElementById('cardWinRate').innerText = `${avgWinRate}%`;
         document.getElementById('cardKDA').innerText = avgKDA;
 
-        if (heroesArray.length > 0) {
+        if (heroesArray.length > 0 && heroesArray[0].timePlayed > 0) {
             const h1 = heroesArray[0];
             document.getElementById('hero1Avatar').src = getHeroAvatarUrl(h1.key);
             document.getElementById('hero1Name').innerText = h1.name;
             document.getElementById('hero1Time').innerText = `勝場: ${h1.gamesWon} 次 | 時間: ${formatTime(h1.timePlayed)}`;
             document.getElementById('hero1WR').innerText = `${h1.winrate}%`;
+        } else {
+            document.getElementById('hero1Name').innerText = '無遊玩紀錄';
+            document.getElementById('hero1Time').innerText = '此模式無數據';
+            document.getElementById('hero1WR').innerText = '-';
         }
 
-        if (heroesArray.length > 1) {
+        if (heroesArray.length > 1 && heroesArray[1].timePlayed > 0) {
             const h2 = heroesArray[1];
             document.getElementById('hero2Avatar').src = getHeroAvatarUrl(h2.key);
             document.getElementById('hero2Name').innerText = h2.name;
             document.getElementById('hero2Time').innerText = `勝場: ${h2.gamesWon} 次 | 時間: ${formatTime(h2.timePlayed)}`;
             document.getElementById('hero2WR').innerText = `${h2.winrate}%`;
+        } else {
+            document.getElementById('hero2Name').innerText = '無遊玩紀錄';
+            document.getElementById('hero2Time').innerText = '此模式無數據';
+            document.getElementById('hero2WR').innerText = '-';
         }
     } else {
-        const heroData = modeData.heroes[selectedHero];
+        const heroData = heroesObj[selectedHero];
         const cName = getHeroChineseName(selectedHero);
+
         if (heroData) {
-            const timePlayed = getStatValue(heroData, 'time_played') || 0;
-            const gamesWon = getStatValue(heroData, 'games_won') || 0;
-            const gamesPlayed = getStatValue(heroData, 'games_played') || 0;
+            const timePlayed = getStatValue(heroData, 'time_played') || getStatValue(heroData, 'time_played_seconds') || 0;
+            const gamesWon = getStatValue(heroData, 'games_won') || getStatValue(heroData, 'wins') || 0;
+            const gamesPlayed = getStatValue(heroData, 'games_played') || getStatValue(heroData, 'matches_played') || 0;
             const elims = getStatValue(heroData, 'eliminations') || 0;
             const deaths = getStatValue(heroData, 'deaths') || 1;
-            const winrate = gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0;
-            const kda = (elims / deaths).toFixed(1);
+            const winrate = getStatValue(heroData, 'winrate') || (gamesPlayed > 0 ? Math.round((gamesWon / gamesPlayed) * 100) : 0);
+            const kda = deaths > 0 ? (elims / deaths).toFixed(1) : elims.toFixed(1);
 
             document.getElementById('cardTotalWins').innerText = gamesWon;
             document.getElementById('cardWinRate').innerText = `${winrate}%`;
@@ -214,37 +214,48 @@ function parseAndDisplayStats(statsData, mode, selectedHero) {
             document.getElementById('hero2Time').innerText = `累積擊殺: ${elims} 次`;
             document.getElementById('hero2WR').innerText = '-';
         } else {
-            document.getElementById('cardTotalWins').innerText = '0';
-            document.getElementById('cardWinRate').innerText = '0%';
-            document.getElementById('cardKDA').innerText = '0.0';
+            resetCardUI();
             document.getElementById('hero1Avatar').src = getHeroAvatarUrl(selectedHero);
             document.getElementById('hero1Name').innerText = cName;
-            document.getElementById('hero1Time').innerText = '此模式下尚無遊玩紀錄';
-            document.getElementById('hero1WR').innerText = '-';
         }
     }
+}
+
+function resetCardUI() {
+    document.getElementById('cardWinRate').innerText = '0%';
+    document.getElementById('cardKDA').innerText = '0.0';
+    document.getElementById('cardTotalWins').innerText = '0';
+    document.getElementById('hero1Name').innerText = '無遊玩紀錄';
+    document.getElementById('hero1Time').innerText = '該模式下尚無戰績';
+    document.getElementById('hero1WR').innerText = '-';
+    document.getElementById('hero2Name').innerText = '無遊玩紀錄';
+    document.getElementById('hero2Time').innerText = '該模式下尚無戰績';
+    document.getElementById('hero2WR').innerText = '-';
 }
 
 function getStatValue(heroObj, statName) {
     if (!heroObj) return 0;
     if (typeof heroObj[statName] === 'number') return heroObj[statName];
-    if (heroObj.general && heroObj.general[statName]) return heroObj.general[statName];
-    if (heroObj.game && heroObj.game[statName]) return heroObj.game[statName];
+    if (heroObj.general && typeof heroObj.general[statName] === 'number') return heroObj.general[statName];
+    if (heroObj.game && typeof heroObj.game[statName] === 'number') return heroObj.game[statName];
     return 0;
 }
 
 function mergeModesData(qp, comp) {
     const merged = { heroes: {} };
     [qp, comp].forEach(mode => {
-        if (!mode || !mode.heroes) return;
-        Object.entries(mode.heroes).forEach(([heroKey, data]) => {
+        if (!mode) return;
+        const heroes = mode.heroes || mode;
+        if (typeof heroes !== 'object') return;
+
+        Object.entries(heroes).forEach(([heroKey, data]) => {
             if (!merged.heroes[heroKey]) {
                 merged.heroes[heroKey] = JSON.parse(JSON.stringify(data));
             } else {
-                const t1 = getStatValue(merged.heroes[heroKey], 'time_played');
-                const t2 = getStatValue(data, 'time_played');
-                const w1 = getStatValue(merged.heroes[heroKey], 'games_won');
-                const w2 = getStatValue(data, 'games_won');
+                const t1 = getStatValue(merged.heroes[heroKey], 'time_played') || getStatValue(merged.heroes[heroKey], 'time_played_seconds');
+                const t2 = getStatValue(data, 'time_played') || getStatValue(data, 'time_played_seconds');
+                const w1 = getStatValue(merged.heroes[heroKey], 'games_won') || getStatValue(merged.heroes[heroKey], 'wins');
+                const w2 = getStatValue(data, 'games_won') || getStatValue(data, 'wins');
                 
                 merged.heroes[heroKey].time_played = t1 + t2;
                 merged.heroes[heroKey].games_won = w1 + w2;
@@ -255,7 +266,7 @@ function mergeModesData(qp, comp) {
 }
 
 function formatTime(seconds) {
-    if (!seconds) return '0分鐘';
+    if (!seconds || seconds <= 0) return '0 分鐘';
     const hours = Math.floor(seconds / 3600);
     if (hours > 0) return `${hours} 小時`;
     const minutes = Math.floor(seconds / 60);
