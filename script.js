@@ -1,8 +1,11 @@
-// 《鬥陣特攻 2》台灣官方繁體中文字典 (無重複精簡版)
+// 《鬥陣特攻 2》台灣官方繁體中文字典
 const heroTranslations = {
     // === 重裝 (Tanks) ===
     "dva": "D.Va",
+    "d.va": "D.Va",
+    "d-va": "D.Va",
     "doomfist": "毀滅拳王",
+    "junker-queen": "垃圾鎮女王",
     "junkerqueen": "垃圾鎮女王",
     "mauga": "莫加",
     "orisa": "歐瑞莎",
@@ -11,6 +14,7 @@ const heroTranslations = {
     "roadhog": "攔路豬",
     "sigma": "席格馬",
     "winston": "溫斯頓",
+    "wrecking-ball": "火爆鋼球",
     "wreckingball": "火爆鋼球",
     "zarya": "札莉雅",
     "hazard": "災害",
@@ -28,10 +32,12 @@ const heroTranslations = {
     "pharah": "法拉",
     "reaper": "死神",
     "sojourn": "索潔恩",
+    "soldier-76": "士兵76",
     "soldier76": "士兵76",
     "sombra": "駭影",
     "symmetra": "辛梅塔",
     "torbjorn": "托比昂",
+    "torbjörn": "托比昂",
     "tracer": "閃光",
     "venture": "無畏",
     "widowmaker": "奪命女",
@@ -45,19 +51,30 @@ const heroTranslations = {
     "kiriko": "霧子",
     "lifeweaver": "織命",
     "lucio": "路西歐",
+    "lúcio": "路西歐",
     "mercy": "慈悲",
     "moira": "莫伊拉",
     "zenyatta": "禪亞塔"
 };
 
-// 輔助函式：將字串清理後自動對照中文
-function getHeroChineseName(englishKey, fallbackName) {
-    if (!englishKey) return fallbackName || '未知英雄';
-    
-    // 自動去除連字號、空格、符號並轉小寫 (例如 "Soldier: 76" -> "soldier76")
-    const cleanKey = englishKey.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    return heroTranslations[cleanKey] || fallbackName || englishKey;
+// 輔助函式：取得中文英雄名稱（相容多種格式）
+function getHeroChineseName(englishKey) {
+    if (!englishKey) return '未知英雄';
+
+    const rawKey = englishKey.toLowerCase().trim();
+    // 1. 先用原始鍵值找 (例如 soldier-76)
+    if (heroTranslations[rawKey]) {
+        return heroTranslations[rawKey];
+    }
+
+    // 2. 轉成去除所有非英數字元後再找一次 (例如 soldier76)
+    const cleanKey = rawKey.replace(/[^a-z0-9]/g, '');
+    if (heroTranslations[cleanKey]) {
+        return heroTranslations[cleanKey];
+    }
+
+    // 3. 若真的找不到，回傳原本輸入的文字
+    return englishKey;
 }
 
 async function fetchPlayerData() {
@@ -109,7 +126,7 @@ async function fetchPlayerData() {
         if (statsData && statsData.heroes && Object.keys(statsData.heroes).length > 0) {
             const heroesArray = Object.entries(statsData.heroes).map(([key, value]) => ({
                 key: key,
-                name: getHeroChineseName(key, value.name),
+                name: getHeroChineseName(key),
                 timePlayed: value.time_played || 0,
                 winrate: value.winrate || 0
             })).sort((a, b) => b.timePlayed - a.timePlayed);
